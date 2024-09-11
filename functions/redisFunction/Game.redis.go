@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"kitten-server/internals"
 	"math"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -150,47 +151,81 @@ type PaginationResponse struct {
 }
 
 func GetUserGames(userName string, page int, limit int) (*PaginationResponse, error) {
-	totalDocument := internals.RDB.ZCount(context.TODO(), "game-"+userName, "-inf", "+inf").Val()
+	key := "game-" + userName
+	ctx := context.TODO()
+
+	// Get the total number of documents
+	totalDocument := internals.RDB.ZCount(ctx, key, "-inf", "+inf").Val()
 
 	if totalDocument == 0 {
 		fmt.Println("No Documents found")
+		return &PaginationResponse{
+			TotalPages:     0,
+			TotalDocuments: 0,
+			CurrentPage:    page,
+			Games:          []GameBoard{},
+		}, nil
 	}
 
+	// Calculate total pages
 	totalPages := int(math.Ceil(float64(totalDocument) / float64(limit)))
-
 	offset := (page - 1) * limit
 
-	key := "game-" + userName
-
-	games, err := internals.RDB.ZRevRange(context.TODO(), key, int64(offset), int64(offset+limit)).Result()
-
+	// Fetch the game IDs for the current page
+	gameIDs, err := internals.RDB.ZRevRange(ctx, key, int64(offset), int64(offset+limit-1)).Result()
 	if err != nil {
 		return nil, err
 	}
 
+	// Use a WaitGroup to handle concurrent requests
+	var wg sync.WaitGroup
+	var mu sync.Mutex
 	var _games []GameBoard
+	errCh := make(chan error, len(gameIDs))
 
-	for _, value := range games {
-		_game, err := internals.RDB.HGetAll(context.TODO(), value).Result()
+	// Fetch each game's details concurrently
+	for _, gameID := range gameIDs {
+		wg.Add(1)
+		go func(id string) {
+			defer wg.Done()
 
-		if err != nil {
-			return nil, err
-		}
+			// Fetch game details concurrently
+			gameData, err := internals.RDB.HGetAll(ctx, id).Result()
+			if err != nil {
+				errCh <- err
+				return
+			}
 
-		game := GameBoard{
-			ID:        _game["Id"],
-			Status:    _game["Status"],
-			CreatedAt: _game["CreatedAt"],
-		}
+			// Build GameBoard struct
+			game := GameBoard{
+				ID:        gameData["Id"],
+				Status:    gameData["Status"],
+				CreatedAt: gameData["CreatedAt"],
+			}
 
-		if _game["IsGameOver"] == "true" {
-			game.IsGameOver = true
-		} else {
-			game.IsGameOver = false
-		}
+			game.IsGameOver = gameData["IsGameOver"] == "true"
 
-		_games = append(_games, game)
+			// Lock the slice while appending to avoid race conditions
+			mu.Lock()
+			_games = append(_games, game)
+			mu.Unlock()
+		}(gameID)
 	}
 
-	return &PaginationResponse{TotalPages: totalPages, TotalDocuments: int(totalDocument), CurrentPage: page, Games: _games}, nil
+	// Wait for all goroutines to finish
+	wg.Wait()
+	close(errCh)
+
+	// Check if there were any errors during fetching
+	if len(errCh) > 0 {
+		return nil, <-errCh
+	}
+
+	// Return the paginated response
+	return &PaginationResponse{
+		TotalPages:     totalPages,
+		TotalDocuments: int(totalDocument),
+		CurrentPage:    page,
+		Games:          _games,
+	}, nil
 }
