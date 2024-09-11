@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 type GameBoard struct {
@@ -86,7 +87,7 @@ func CreateGameBoard(userName string) (string, error) {
 	internals.RDB.HSet(context.TODO(), gameKey, "Status", "ONGOING") // Status will be ONGOING, WON, LOST
 	internals.RDB.HSet(context.TODO(), gameKey, "CreatedAt", timeStamp)
 
-	if err := internals.RDB.HSet(context.TODO(), parentKey, gameKey, gameKey).Err(); err != nil {
+	if err := internals.RDB.ZAdd(context.TODO(), parentKey, redis.Z{Score: float64(time.Now().Unix()), Member: gameKey}).Err(); err != nil {
 		return "", err
 	}
 
@@ -140,10 +141,13 @@ func StoreGameMoves(gameKey string, gameBoard GameBoard, userName string) error 
 	return nil
 }
 
-func GetUserGames(userName string) ([]GameBoard, error) {
+func GetUserGames(userName string,page int, limit int) ([]GameBoard, error) {
+
+	offset := (page - 1) * limit
+
 	key := "game-" + userName
 
-	games, err := internals.RDB.HGetAll(context.TODO(), key).Result()
+	games, err := internals.RDB.ZRevRange(context.TODO(), key, int64(offset), int64(offset+limit)).Result()
 
 	if err != nil {
 		return nil, err

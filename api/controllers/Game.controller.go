@@ -81,11 +81,14 @@ func StoreGameMovesModel(c *fiber.Ctx) error {
 func GetUserGamesModel(c *fiber.Ctx) error {
 	userName, err := middleware.GetUserId(c)
 
+	page := c.QueryInt("page")
+	limit := c.QueryInt("limit")
+
 	if err != nil || userName == "" {
 		return request.InvalidUserRouter(c)
 	}
 
-	result, err := redisfunction.GetUserGames(userName)
+	result, err := redisfunction.GetUserGames(userName, page, limit)
 
 	if err != nil {
 		return request.ErrorRouter(c, "Unable to get user games", err.Error())
@@ -96,11 +99,11 @@ func GetUserGamesModel(c *fiber.Ctx) error {
 
 func GetLeaderBoardModel(c *fiber.Ctx) error {
 
-	result,err := redisfunction.GetLeaderBoard()
+	result, err := redisfunction.GetLeaderBoard()
 
 	if err != nil {
 		return request.ErrorRouter(c, "Unable to get leaderboard", err.Error())
 	}
 
-	return request.SuccessRouter(c, "Leaderboard fetched successfully", result);
+	return request.SuccessRouter(c, "Leaderboard fetched successfully", result)
 }
