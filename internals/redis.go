@@ -1,8 +1,8 @@
 package internals
 
 import (
-	"kitten-server/constants"
 	"log"
+	"os"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -11,7 +11,7 @@ var RDB *redis.Client
 
 
 func InitRedis() {
-	serviceURI := constants.GetENVConstant("REDIS_URL")
+	serviceURI := os.Getenv("REDIS_URL")
 
 	if serviceURI == "" {
 		panic("REDIS_URL is not set in environment")
