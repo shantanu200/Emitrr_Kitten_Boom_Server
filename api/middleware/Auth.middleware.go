@@ -13,7 +13,7 @@ import (
 )
 
 func LoadPublicKey() (*rsa.PublicKey, error) {
-	keyPath, err := filepath.Abs("./../certs/public.pem")
+	keyPath, err := filepath.Abs("/app/certs/public.pem")
 	if err != nil {
 		return nil, err
 	}

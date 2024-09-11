@@ -11,8 +11,7 @@ import (
 
 
 func GenerateAccessToken(userName string) (string, error) {
-
-	keyPath,err := filepath.Abs("./../certs/private.pem")
+	keyPath,err := filepath.Abs("/app/certs/private.pem")
 	
 	if err != nil {
 		return "",err
