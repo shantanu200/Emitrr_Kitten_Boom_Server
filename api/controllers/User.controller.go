@@ -4,7 +4,6 @@ import (
 	"kitten-server/api/middleware"
 	"kitten-server/api/request"
 	redisfunction "kitten-server/functions/redisFunction"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
