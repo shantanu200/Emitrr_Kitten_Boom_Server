@@ -50,8 +50,8 @@ func LoginUserName(c *fiber.Ctx) error {
 		Name:     "access-token",
 		Value:    token,
 		Expires:  time.Now().Add(24 * time.Hour),
-		HTTPOnly: true,
-		Secure:   false,
+		HTTPOnly: false,
+		Secure:   true,
 		SameSite: "None",
 		Path:     "/",
 	})
