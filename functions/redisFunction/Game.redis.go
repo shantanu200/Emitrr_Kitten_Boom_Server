@@ -101,43 +101,67 @@ func CreateGameBoard(userName string) (string, error) {
 }
 
 func StoreGameMoves(gameKey string, gameBoard GameBoard, userName string) error {
-	exists, err := GameBoardExists(gameKey)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	ctx := context.TODO()
 
+	exists, err := GameBoardExists(gameKey)
 	if err != nil || !exists {
 		return err
 	}
 
 	_deck, err := json.Marshal(gameBoard.Deck)
-
 	if err != nil {
 		return err
 	}
-
 	_moves, err := json.Marshal(gameBoard.Moves)
-
 	if err != nil {
 		return err
 	}
 
-	internals.RDB.HSet(context.TODO(), gameKey, "Deck", _deck)
-	internals.RDB.HSet(context.TODO(), gameKey, "Moves", _moves)
-	internals.RDB.HSet(context.TODO(), gameKey, "DefuseCount", gameBoard.DefuseCount)
-	internals.RDB.HSet(context.TODO(), gameKey, "Status", gameBoard.Status)
+	pipe := internals.RDB.Pipeline()
 
-	fmt.Println(gameBoard.Status)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		pipe.HSet(ctx, gameKey, "Deck", _deck)
+		pipe.HSet(ctx, gameKey, "Moves", _moves)
+		pipe.HSet(ctx, gameKey, "DefuseCount", gameBoard.DefuseCount)
+		pipe.HSet(ctx, gameKey, "Status", gameBoard.Status)
+	}()
 
-	if gameBoard.Status == "WON" {
-		internals.RDB.HIncrBy(context.TODO(), userName, "totalGameWon", 1)
-		internals.RDB.HSet(context.TODO(), gameKey, "IsGameOver", "true")
-	} else if gameBoard.Status == "LOST" {
-		internals.RDB.HIncrBy(context.TODO(), userName, "totalGameLost", 1)
-		internals.RDB.HSet(context.TODO(), gameKey, "IsGameOver", "true")
+	if gameBoard.Status == "WON" || gameBoard.Status == "LOST" {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			mu.Lock()
+			pipe.HSet(ctx, gameKey, "IsGameOver", "true")
+			if gameBoard.Status == "WON" {
+				pipe.HIncrBy(ctx, userName, "totalGameWon", 1)
+			} else if gameBoard.Status == "LOST" {
+				pipe.HIncrBy(ctx, userName, "totalGameLost", 1)
+			}
+			mu.Unlock()
+		}()
 	}
 
 	if gameBoard.Status != "ONGOING" {
-		if err := UpdatePlayerRanking(userName); err != nil {
-			return err
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			mu.Lock()
+			if err := UpdatePlayerRanking(userName); err != nil {
+				fmt.Printf("Error updating ranking: %v", err)
+			}
+			mu.Unlock()
+		}()
+	}
+
+	wg.Wait()
+
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		return err
 	}
 
 	return nil
