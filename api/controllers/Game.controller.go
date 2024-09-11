@@ -81,8 +81,8 @@ func StoreGameMovesModel(c *fiber.Ctx) error {
 func GetUserGamesModel(c *fiber.Ctx) error {
 	userName, err := middleware.GetUserId(c)
 
-	page := c.QueryInt("page")
-	limit := c.QueryInt("limit")
+	page := c.QueryInt("page",1)
+	limit := c.QueryInt("limit",10)
 
 	if err != nil || userName == "" {
 		return request.InvalidUserRouter(c)
