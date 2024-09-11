@@ -61,17 +61,8 @@ func CreateUserName(c *fiber.Ctx) error {
 	if err != nil {
 		return request.ErrorRouter(c, "Unable to create user", err.Error())
 	}
-	c.Cookie(&fiber.Cookie{
-		Name:     "access-token",
-		Value:    token,
-		Expires:  time.Now().Add(24 * time.Hour),
-		HTTPOnly: true,
-		Secure:   true,
-		SameSite: "None",
-		Path:     "/",
-	})
 
-	return request.SuccessRouter(c, "User created successfully", fiber.Map{"isLoggedIn": true})
+	return request.SuccessRouter(c, "User logged in successfully", fiber.Map{"accessToken": token, "userName": payload.UserName})
 }
 
 func GetUserDetailsModel(c *fiber.Ctx) error {
