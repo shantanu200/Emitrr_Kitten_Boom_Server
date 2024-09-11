@@ -1,6 +1,8 @@
 package internals
 
 import (
+	"fmt"
+	"kitten-server/constants"
 	"log"
 	"os"
 
@@ -11,10 +13,12 @@ var RDB *redis.Client
 
 
 func InitRedis() {
-	serviceURI := os.Getenv("REDIS_URL")
+	serviceURI := constants.GetENVConstant("REDIS_URL")
 
 	if serviceURI == "" {
-		panic("REDIS_URL is not set in environment")
+		fmt.Println("REDIS_URL is not set in environment")
+
+		serviceURI = os.Getenv("REDIS_URL")
 	}
 
 	addr, err := redis.ParseURL(serviceURI);
