@@ -50,8 +50,8 @@ func LoginUserName(c *fiber.Ctx) error {
 		Name:     "access-token",
 		Value:    token,
 		Expires:  time.Now().Add(24 * time.Hour),
-		HTTPOnly: false,
-		Secure:   false,
+		HTTPOnly: true,
+		Secure:   true,
 		SameSite: "None",
 		Path:     "/",
 	})
@@ -75,8 +75,8 @@ func CreateUserName(c *fiber.Ctx) error {
 		Name:     "access-token",
 		Value:    token,
 		Expires:  time.Now().Add(24 * time.Hour),
-		HTTPOnly: false,
-		Secure:   false,
+		HTTPOnly: true,
+		Secure:   true,
 		SameSite: "None",
 		Path:     "/",
 	})
