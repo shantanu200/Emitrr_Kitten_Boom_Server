@@ -46,17 +46,7 @@ func LoginUserName(c *fiber.Ctx) error {
 		return request.ErrorRouter(c, "Unable to login user", err.Error())
 	}
 
-	c.Cookie(&fiber.Cookie{
-		Name:     "access-token",
-		Value:    token,
-		Expires:  time.Now().Add(24 * time.Hour),
-		HTTPOnly: false,
-		Secure:   true,
-		SameSite: "None",
-		Path:     "/",
-	})
-
-	return request.SuccessRouter(c, "User logged in successfully", fiber.Map{"isLoggedIn": true})
+	return request.SuccessRouter(c, "User logged in successfully", fiber.Map{"accessToken": token, "userName": payload.UserName})
 }
 
 func CreateUserName(c *fiber.Ctx) error {
