@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"kitten-server/internals"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -141,7 +142,21 @@ func StoreGameMoves(gameKey string, gameBoard GameBoard, userName string) error 
 	return nil
 }
 
-func GetUserGames(userName string,page int, limit int) ([]GameBoard, error) {
+type PaginationResponse struct {
+	TotalPages     int         `json:"totalPages"`
+	TotalDocuments int         `json:"totalDocuments"`
+	CurrentPage    int         `json:"currentPage"`
+	Games          []GameBoard `json:"games"`
+}
+
+func GetUserGames(userName string, page int, limit int) (*PaginationResponse, error) {
+	totalDocument := internals.RDB.ZCount(context.TODO(), "game-"+userName, "-inf", "+inf").Val()
+
+	if totalDocument == 0 {
+		fmt.Println("No Documents found")
+	}
+
+	totalPages := int(math.Ceil(float64(totalDocument) / float64(limit)))
 
 	offset := (page - 1) * limit
 
@@ -177,5 +192,5 @@ func GetUserGames(userName string,page int, limit int) ([]GameBoard, error) {
 		_games = append(_games, game)
 	}
 
-	return _games, nil
+	return &PaginationResponse{TotalPages: totalPages, TotalDocuments: int(totalDocument), CurrentPage: page, Games: _games}, nil
 }
