@@ -11,7 +11,7 @@ This is a RESTful API built using Go and the [Fiber](https://gofiber.io/) web fr
   
 The server is responsible for managing users, games, and game-related data such as leaderboards and moves. 
 
-## [Deployment Link](emitrrkittenboomserver-production.up.railway.app)
+## [Deployment Link](https://emitrrkittenboomserver-production.up.railway.app/)
 
 ### Run Local
 
