@@ -3,6 +3,7 @@ package redisfunction
 import (
 	"context"
 	"errors"
+	"fmt"
 	"kitten-server/api/utils"
 	"kitten-server/internals"
 	"strconv"
@@ -28,6 +29,7 @@ func CheckUserNameExists(userName string) (bool, error) {
 		return false, nil
 	}
 
+	fmt.Println(exists);
 	return exists == 1, nil
 }
 
