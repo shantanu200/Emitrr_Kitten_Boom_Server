@@ -10,36 +10,36 @@ import (
 )
 
 func UpdatePlayerRanking(userName string) error {
-
-	totalWin, err := internals.RDB.HGet(context.TODO(), userName, "totalGameWon").Result()
-
-	if err != nil {
-		return err
-	}
-
-	totalGamePlayed, err := internals.RDB.HGet(context.TODO(), userName, "totalGamePlayed").Result()
+	pipe := internals.RDB.Pipeline()
+	totalWinCmd := pipe.HGet(context.TODO(), userName, "totalGameWon")
+	totalGamePlayedCmd := pipe.HGet(context.TODO(), userName, "totalGamePlayed")
+	_, err := pipe.Exec(context.TODO())
 
 	if err != nil {
 		return err
 	}
 
-	_totalWin, err := strconv.ParseInt(totalWin, 10, 64)
-
+	totalWin, err := strconv.ParseInt(totalWinCmd.Val(), 10, 64)
 	if err != nil {
 		return err
 	}
 
-	_totalGamePlayed, err := strconv.ParseInt(totalGamePlayed, 10, 64)
-
+	totalGamePlayed, err := strconv.ParseInt(totalGamePlayedCmd.Val(), 10, 64)
 	if err != nil {
 		return err
 	}
 
-	score := (float64(_totalWin) / float64(_totalGamePlayed)) * 100
+	if totalGamePlayed == 0 {
+		return nil
+	}
 
-	score = math.Round(score) / 100
+	score := (float64(totalWin) / float64(totalGamePlayed)) * 100
+	score = math.Round(score*100) / 100 // Round to 2 decimal places
 
-	if err := internals.RDB.ZAdd(context.TODO(), "leaderboard", redis.Z{Score: float64(score), Member: userName}).Err(); err != nil {
+	if err := internals.RDB.ZAdd(context.TODO(), "leaderboard", redis.Z{
+		Score:  score,
+		Member: userName,
+	}).Err(); err != nil {
 		return err
 	}
 
@@ -48,25 +48,23 @@ func UpdatePlayerRanking(userName string) error {
 
 func GetUserRank(userName string) (int64, error) {
 	rank, err := internals.RDB.ZRevRank(context.TODO(), "leaderboard", userName).Result()
-
-	if err != nil {
+	if err == redis.Nil {
+		return 0, nil
+	} else if err != nil {
 		return 0, err
 	}
 
 	return rank + 1, nil
 }
-
-func GetLeaderBoard() ([]string,error) {
+func GetLeaderBoard() ([]string, error) {
 	leaderboard, err := internals.RDB.ZRevRangeByScore(context.TODO(), "leaderboard", &redis.ZRangeBy{
 		Min: "0",
 		Max: "+inf",
 	}).Result()
 
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-
-
 
 	return leaderboard, nil
 }

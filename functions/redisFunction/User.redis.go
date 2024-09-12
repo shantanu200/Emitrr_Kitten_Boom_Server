@@ -89,7 +89,7 @@ func GetUserDetails(userName string) (*UserNamePayload, error) {
 	pipe := internals.RDB.Pipeline()
 
 	userCmd := pipe.HGetAll(context.TODO(), userName)
-	rankCmd := pipe.ZRank(context.TODO(), "leaderboard", userName) // Assuming a leaderboard sorted set
+	
 	_, err := pipe.Exec(context.TODO())
 
 	if err != nil {
@@ -99,6 +99,12 @@ func GetUserDetails(userName string) (*UserNamePayload, error) {
 	user := userCmd.Val()
 	if len(user) == 0 {
 		return nil, errors.New("user not exists")
+	}
+
+	rankCmd, err := GetUserRank(userName);
+
+	if err != nil {
+		return nil, err
 	}
 
 	totalGamesPlayed, err := strconv.ParseInt(user["totalGamePlayed"], 10, 64)
@@ -114,10 +120,7 @@ func GetUserDetails(userName string) (*UserNamePayload, error) {
 		return nil, err
 	}
 
-	var rank int64 = -1
-	if rankCmd.Err() == nil {
-		rank = rankCmd.Val()
-	}
+
 
 	userDetails := UserNamePayload{
 		UserName:        user["username"],
@@ -125,7 +128,7 @@ func GetUserDetails(userName string) (*UserNamePayload, error) {
 		TotalGamePlayed: totalGamesPlayed,
 		TotalGameWon:    totalGameWon,
 		TotalGameLost:   totalGameLost,
-		LeaderBoardRank: rank,
+		LeaderBoardRank: rankCmd,
 		CreatedAt:       user["createdAt"],
 	}
 
