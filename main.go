@@ -17,7 +17,7 @@ func main() {
 	app := fiber.New();
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://localhost:5173, https://66e29aac2e546c156bb8f74c--kittenbommm.netlify.app/",
+		AllowOrigins: "http://localhost:5173, https://66e29aac2e546c156bb8f74c--kittenbommm.netlify.app/, https://kitttenboom.netlify.app/",
 		AllowMethods: "GET,POST,HEAD,PUT,DELETE,PATCH",
 		AllowHeaders: "Content-Type, Authorization, Origin, Accept",
 		AllowCredentials: true,
