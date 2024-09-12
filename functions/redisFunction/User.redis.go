@@ -62,6 +62,12 @@ func LoginUserName(userName string, password string) (string, error) {
 }
 
 func CreateUserNameHandler(userName string, password string) (string, error) {
+	exists,err := CheckUserNameExists(userName);
+
+	if exists {
+		return "", errors.New("user already exists") 
+	}
+
 	pipe := internals.RDB.Pipeline();
 
 	pipe.HSet(context.TODO(), userName, "username", userName)
