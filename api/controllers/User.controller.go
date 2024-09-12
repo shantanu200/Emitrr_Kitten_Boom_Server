@@ -26,10 +26,7 @@ func CheckUserNameExistsModel(c *fiber.Ctx) error {
 		return request.ErrorRouter(c, "Unable to check user exists", err.Error())
 	}
 
-	if exists {
-		return request.SuccessRouter(c, "User already exists", fiber.Map{"exists": true})
-	}
-	return request.SuccessRouter(c, "User does not exists", fiber.Map{"exists": false})
+	return request.SuccessRouter(c, "User exists", fiber.Map{"exists": exists})
 }
 
 func LoginUserName(c *fiber.Ctx) error {

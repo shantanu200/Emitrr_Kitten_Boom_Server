@@ -3,7 +3,6 @@ package redisfunction
 import (
 	"context"
 	"errors"
-	"fmt"
 	"kitten-server/api/utils"
 	"kitten-server/internals"
 	"strconv"
@@ -25,12 +24,13 @@ type UserNamePayload struct {
 func CheckUserNameExists(userName string) (bool, error) {
 	exists, err := internals.RDB.Exists(context.TODO(), userName).Result()
 
-	if err != redis.Nil {
+
+	if err != redis.Nil && err != nil {
 		return false, nil
 	}
 
-	fmt.Println(exists);
-	return exists == 1, nil
+
+	return exists == 1 , nil
 }
 
 func LoginUserName(userName string, password string) (string, error) {
