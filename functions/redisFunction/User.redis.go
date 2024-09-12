@@ -64,7 +64,7 @@ func LoginUserName(userName string, password string) (string, error) {
 func CreateUserNameHandler(userName string, password string) (string, error) {
 	exists,err := CheckUserNameExists(userName);
 
-	if exists {
+	if exists || err != nil {
 		return "", errors.New("user already exists") 
 	}
 
@@ -78,7 +78,7 @@ func CreateUserNameHandler(userName string, password string) (string, error) {
 	pipe.HSet(context.TODO(), userName, "createdAt", time.Now().Format(time.RFC3339))
 	pipe.IncrBy(context.TODO(), "totalPlayers", 1);
 
-	_,err := pipe.Exec(context.TODO());
+	_,err = pipe.Exec(context.TODO());
 
 	if err != nil {
 		return "",err
