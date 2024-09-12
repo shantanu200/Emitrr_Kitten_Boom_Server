@@ -39,7 +39,7 @@ func LoginUserName(userName string, password string) (string, error) {
 	_password := pipe.HGet(context.TODO(), userName, "password")
 
 	_, err := pipe.Exec(context.TODO())
-
+	
 	if err == redis.Nil {
 		return "", errors.New("user not found")
 	}
