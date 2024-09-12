@@ -74,26 +74,32 @@ func GetGameBoard(gameKey string) (GameBoard, error) {
 }
 
 func CreateGameBoard(userName string) (string, error) {
+	ctx := context.TODO()
 	parentKey := "game-" + userName
-
 	randomId := uuid.New().String()
-
 	gameKey := "game-" + userName + "-" + randomId
-
 	timeStamp := time.Now().Format(time.RFC3339)
 
-	internals.RDB.HSet(context.TODO(), gameKey, "Id", randomId)
-	internals.RDB.HSet(context.TODO(), gameKey, "Moves", "[]")
-	internals.RDB.HSet(context.TODO(), gameKey, "Deck", "[]")
-	internals.RDB.HSet(context.TODO(), gameKey, "DefuseCount", 0)
-	internals.RDB.HSet(context.TODO(), gameKey, "Status", "ONGOING") // Status will be ONGOING, WON, LOST
-	internals.RDB.HSet(context.TODO(), gameKey, "CreatedAt", timeStamp)
+	pipe := internals.RDB.Pipeline()
 
-	if err := internals.RDB.ZAdd(context.TODO(), parentKey, redis.Z{Score: float64(time.Now().Unix()), Member: gameKey}).Err(); err != nil {
-		return "", err
-	}
+	pipe.HSet(ctx, gameKey, map[string]interface{}{
+		"Id":         randomId,
+		"Moves":      "[]",
+		"Deck":       "[]",
+		"DefuseCount": 0,
+		"Status":     "ONGOING",
+		"CreatedAt":  timeStamp,
+	})
 
-	if err := internals.RDB.HIncrBy(context.TODO(), userName, "totalGamePlayed", 1).Err(); err != nil {
+	pipe.ZAdd(ctx, parentKey, redis.Z{
+		Score:  float64(time.Now().Unix()),
+		Member: gameKey,
+	})
+
+	pipe.HIncrBy(ctx, userName, "totalGamePlayed", 1)
+
+	_, err := pipe.Exec(ctx)
+	if err != nil {
 		return "", err
 	}
 

@@ -68,6 +68,7 @@ func CreateUserNameHandler(userName string, password string) (string, error) {
 	pipe.HSet(context.TODO(), userName, "totalGameWon", 0)
 	pipe.HSet(context.TODO(), userName, "totalGameLost", 0)
 	pipe.HSet(context.TODO(), userName, "createdAt", time.Now().Format(time.RFC3339))
+	pipe.IncrBy(context.TODO(), "totalPlayers", 1);
 
 	_,err := pipe.Exec(context.TODO());
 
