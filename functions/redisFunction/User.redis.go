@@ -28,7 +28,7 @@ func CheckUserNameExists(userName string) (bool, error) {
 		return false, nil
 	}
 
-	return exists != 0, nil
+	return exists == 1, nil
 }
 
 func LoginUserName(userName string, password string) (string, error) {
