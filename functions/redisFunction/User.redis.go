@@ -40,6 +40,10 @@ func LoginUserName(userName string, password string) (string, error) {
 
 	_, err := pipe.Exec(context.TODO())
 
+	if err == redis.Nil {
+		return "", errors.New("user not found")
+	}
+
 	if err != nil {
 		return "", err
 	}
@@ -128,7 +132,6 @@ func GetUserDetails(userName string) (*UserNamePayload, error) {
 	if err != nil {
 		return nil, err
 	}
-
 
 
 	userDetails := UserNamePayload{
