@@ -96,10 +96,14 @@ func CreateGameBoard(userName string) (string, error) {
 		Member: gameKey,
 	})
 
-	pipe.IncrBy(ctx, "totalGamesPlayed", 1)
+	pipe.HIncrBy(ctx, userName, "totalGamePlayed", 1)
 
 	_, err := pipe.Exec(ctx)
 	if err != nil {
+		return "", err
+	}
+
+	if err := internals.RDB.IncrBy(ctx, "totalGamesPlayed", 1).Err(); err != nil {
 		return "", err
 	}
 
