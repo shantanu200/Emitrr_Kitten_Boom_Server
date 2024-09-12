@@ -25,7 +25,7 @@ func CheckUserNameExists(userName string) (bool, error) {
 	exists, err := internals.RDB.Exists(context.TODO(), userName).Result()
 
 	if err != redis.Nil {
-		return true, nil
+		return false, nil
 	}
 
 	return exists != 0, nil
