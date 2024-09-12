@@ -24,27 +24,29 @@ type UserNamePayload struct {
 func CheckUserNameExists(userName string) (bool, error) {
 	exists, err := internals.RDB.Exists(context.TODO(), userName).Result()
 
-	if err != redis.Nil && exists != 0 {
+	if err != redis.Nil {
 		return true, nil
 	}
 
-	return false, nil
+	return exists != 0, nil
 }
 
 func LoginUserName(userName string, password string) (string, error) {
-	user, err := internals.RDB.Exists(context.TODO(), userName).Result()
+	pipe := internals.RDB.Pipeline()
+	_userName := pipe.Exists(context.TODO(), userName)
+	_password := pipe.HGet(context.TODO(), userName, "password")
 
-	if err != nil || user == 0 {
-		return "", errors.New("user not exists")
-	}
-
-	userPassword, err := internals.RDB.HGet(context.TODO(), userName, "password").Result()
+	_, err := pipe.Exec(context.TODO())
 
 	if err != nil {
 		return "", err
 	}
 
-	if userPassword != password {
+	if _userName.Val() == 0 {
+		return "", errors.New("user not found")
+	}
+
+	if _password.Val() != password {
 		return "", errors.New("invalid password")
 	}
 
@@ -58,12 +60,20 @@ func LoginUserName(userName string, password string) (string, error) {
 }
 
 func CreateUserNameHandler(userName string, password string) (string, error) {
-	internals.RDB.HSet(context.TODO(), userName, "username", userName)
-	internals.RDB.HSet(context.TODO(), userName, "password", password)
-	internals.RDB.HSet(context.TODO(), userName, "totalGamePlayed", 0)
-	internals.RDB.HSet(context.TODO(), userName, "totalGameWon", 0)
-	internals.RDB.HSet(context.TODO(), userName, "totalGameLost", 0)
-	internals.RDB.HSet(context.TODO(), userName, "createdAt", time.Now().Format(time.RFC3339))
+	pipe := internals.RDB.Pipeline();
+
+	pipe.HSet(context.TODO(), userName, "username", userName)
+	pipe.HSet(context.TODO(), userName, "password", password)
+	pipe.HSet(context.TODO(), userName, "totalGamePlayed", 0)
+	pipe.HSet(context.TODO(), userName, "totalGameWon", 0)
+	pipe.HSet(context.TODO(), userName, "totalGameLost", 0)
+	pipe.HSet(context.TODO(), userName, "createdAt", time.Now().Format(time.RFC3339))
+
+	_,err := pipe.Exec(context.TODO());
+
+	if err != nil {
+		return "",err
+	}
 
 	token, err := utils.GenerateAccessToken(userName)
 
@@ -76,37 +86,40 @@ func CreateUserNameHandler(userName string, password string) (string, error) {
 }
 
 func GetUserDetails(userName string) (*UserNamePayload, error) {
-	user, err := internals.RDB.HGetAll(context.TODO(), userName).Result()
+	pipe := internals.RDB.Pipeline()
 
-	if err == redis.Nil || user == nil {
+	userCmd := pipe.HGetAll(context.TODO(), userName)
+	rankCmd := pipe.ZRank(context.TODO(), "leaderboard", userName) // Assuming a leaderboard sorted set
+	_, err := pipe.Exec(context.TODO())
+
+	if err != nil {
+		return nil, err
+	}
+
+	user := userCmd.Val()
+	if len(user) == 0 {
 		return nil, errors.New("user not exists")
 	}
 
 	totalGamesPlayed, err := strconv.ParseInt(user["totalGamePlayed"], 10, 64)
-
 	if err != nil {
 		return nil, err
 	}
-
 	totalGameWon, err := strconv.ParseInt(user["totalGameWon"], 10, 64)
-
 	if err != nil {
 		return nil, err
 	}
-
 	totalGameLost, err := strconv.ParseInt(user["totalGameLost"], 10, 64)
-
 	if err != nil {
 		return nil, err
 	}
 
-	rank, err := GetUserRank(userName)
-
-	if err != redis.Nil && err != nil {
-		return nil, err
+	var rank int64 = -1
+	if rankCmd.Err() == nil {
+		rank = rankCmd.Val()
 	}
 
-	_user := UserNamePayload{
+	userDetails := UserNamePayload{
 		UserName:        user["username"],
 		Password:        user["password"],
 		TotalGamePlayed: totalGamesPlayed,
@@ -116,5 +129,5 @@ func GetUserDetails(userName string) (*UserNamePayload, error) {
 		CreatedAt:       user["createdAt"],
 	}
 
-	return &_user, nil
+	return &userDetails, nil
 }
